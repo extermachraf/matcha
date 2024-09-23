@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: securepassword123
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: backend_service
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgres://myuser:securepassword123@postgres_db:5432/mydatabase
+      DEBUG: backend:*
+    ports:
+      - "3000:3000"
+    volumes:
+      # - pgdata:/var/lib/postgresql/data
+      - backend_data:/path/to/volume/in/container
+
+volumes:
+  pgdata:
+  backend_data:
