@@ -5,9 +5,11 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const connectDb = require('./db'); // Import the connect function
 
+// Import the todo router
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-var testRouter = require('./routes/test');
+const registerRouter = require('./routes/authentication/register');
+// const registerRouter = require('./routes/authentication/'); // Import the register router
 
 var app = express();
 
@@ -23,7 +25,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
-app.use('/test', testRouter);
+app.use('/auth', registerRouter);
+// app.use('/auth', registerRouter);  // Adds the registration route under '/auth/register'
+// app.use('/auth', protectedRouter); // Adds the protected route under '/auth/protected'
 
 // Connect to the database
 connectDb()

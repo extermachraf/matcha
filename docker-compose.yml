@@ -7,11 +7,12 @@ services:
     environment:
       POSTGRES_USER: myuser
       POSTGRES_PASSWORD: securepassword123
-      POSTGRES_DB: mydatabase
+      POSTGRES_DB:  perntodo
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d
 
   backend:
     build: ./backend
@@ -26,7 +27,17 @@ services:
     volumes:
       # - pgdata:/var/lib/postgresql/data
       - backend_data:/path/to/volume/in/container
+  frontend:
+    build: ./frontend # Assuming your Next.js app is in a folder named 'frontend'
+    container_name: frontend_service
+    depends_on:
+      - backend
+    ports:
+      - "3001:3000" # Map port 3001 on the host to port 3000 in the container
+    volumes:
+      - ./frontend:/app # Mount the frontend directory to the container
 
 volumes:
   pgdata:
   backend_data:
+  frontend_data:

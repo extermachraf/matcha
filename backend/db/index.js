@@ -9,11 +9,11 @@ const connectDb = async () => {
     while (retries) {
       try {
         db = pgp({
-          host: process.env.DB_HOST || 'localhost',
-          port: process.env.DB_PORT || 5432,
-          database: process.env.DB_NAME || 'your_database',
-          user: process.env.DB_USER || 'your_username',
-          password: process.env.DB_PASSWORD || 'your_password',
+          host: process.env.DB_HOST,
+          port: process.env.DB_PORT,
+          database: process.env.DB_NAME,
+          user: process.env.DB_USER,
+          password: process.env.DB_PASSWORD,
         });
         await db.connect(); // Attempt to connect
         console.log('Database connected successfully');
