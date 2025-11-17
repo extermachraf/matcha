@@ -214,3 +214,33 @@ def update_user_last_seen(user_id: int):
             connection.commit()
     except Exception as e:
         raise Exception(f"Failed to update user last seen in database: {e}")
+    
+def get_user_by_id(user_id: int) -> dict | None:
+    """
+    Retrieves a user record by user ID.
+    
+    Args:
+        user_id: The ID of the user to retrieve.
+        
+    Returns:
+        A dictionary of the user record if found, else None.
+    """
+    engine = get_db_engine()
+    
+    sql = """
+        SELECT * FROM users
+        WHERE id = :user_id_param
+        LIMIT 1;
+    """
+    
+    params = {
+        'user_id_param': user_id
+    }
+    
+    with engine.connect() as connection:
+        result = connection.execute(text(sql), params).fetchone()
+        
+    if result is None:
+        return None
+    
+    return dict(result._mapping)

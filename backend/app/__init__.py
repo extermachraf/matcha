@@ -23,6 +23,9 @@ def create_app(config_class='config.DevelopmentConfig'):
     # Import and Register Blueprints
     from app.routes.auth import bp as auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    
+    from app.routes.profile import bp as profile_bp
+    app.register_blueprint(profile_bp, url_prefix='/api/profile')
 
     # Fail-fast DB connectivity check: attempt a minimal query using the
     # same engine Flask-SQLAlchemy will use. If it fails, raise a clear
