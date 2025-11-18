@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, date
 from app.repositories.user import check_username_uniqueness_exept_id
+from app.constants.tags import ALL_TAGS, CATEGORY_IDS
 
 class inputValidationExeption(Exception):
     # custom exception for input validation errors
@@ -108,5 +109,27 @@ def validate_profile_update_data(data, current_user_id):
 
     if errors:
         raise inputValidationExeption("Profile data validation failed.", errors=errors)
+        
+    return data
+
+
+def validate_update_tags_data(data):
+    """
+    Validates the tags data for updating user tags.
+    Expects 'tags' to be a list of non-empty strings.
+    
+    """
+    errors = {}
+    
+    if 'tags' not in data or not isinstance(data['tags'], list):
+        errors['tags'] = "Tags must be provided as a list."
+    else:
+        for tag in data['tags']:
+            if not isinstance(tag, str) or tag.strip() == "":
+                errors['tags'] = "Each tag must be a non-empty string."
+            elif tag not in ALL_TAGS:
+                errors['tags'] = f"Invalid tag: '{tag}'."
+    if errors:
+        raise inputValidationExeption("Tags data validation failed.", errors=errors)
         
     return data

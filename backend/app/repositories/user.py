@@ -1,4 +1,6 @@
 from app.repositories.connection import get_db_engine
+from app.repositories.tags import get_tag_ids_by_names
+from app.constants.tags import ALL_TAGS, CATEGORY_IDS
 from sqlalchemy import text
 
 
@@ -316,3 +318,119 @@ def check_username_uniqueness_exept_id(username: str, user_id: int) -> bool:
         result = connection.execute(text(sql), params).fetchone()
         
     return result is None  # True if unique, False if duplicate found
+
+def update_user_tags(user_id: int, tags_list: list):
+    """
+    Transactional update of user tags: maps names to IDs, deletes old, inserts new.
+    """
+    engine = get_db_engine()
+    
+    # 1. Map Tag Names to IDs
+    tag_id_map = get_tag_ids_by_names(tags_list)
+    
+    # Check for invalid tags submitted by the user
+    if len(tag_id_map) != len(tags_list):
+        submitted_set = set(tags_list)
+        found_set = set(tag_id_map.keys())
+        invalid_tags = list(submitted_set - found_set)
+        
+        # If any submitted tag is not found in the DB, raise an error
+        if invalid_tags:
+            # We re-raise an InputValidationExeption, assuming you import it here
+            from app.services.input_validatore import inputValidationExeption
+            raise inputValidationExeption(
+                "One or more submitted tags are invalid or not defined.",
+                errors={"tags": f"Invalid tags: {', '.join(invalid_tags)}"},
+                status_code=400
+            )
+
+    # 2. Start Transaction
+    with engine.connect() as connection:
+        trans = connection.begin()
+        
+        try:
+            # A. DELETE: Remove all existing tags for the user
+            delete_sql = "DELETE FROM user_tags WHERE user_id = :user_id;"
+            connection.execute(text(delete_sql), {'user_id': user_id})
+            
+            # B. INSERT: Add the new tags
+            if tags_list:
+                insert_values = []
+                for tag_name in tags_list:
+                    tag_id = tag_id_map[tag_name] # Use the mapped ID
+                    
+                    insert_values.append({
+                        'user_id': user_id,
+                        'tag_id': tag_id
+                    })
+
+                insert_sql = "INSERT INTO user_tags (user_id, tag_id) VALUES (:user_id, :tag_id);"
+                connection.execute(text(insert_sql), insert_values)
+
+            # C. COMMIT: Finalize the transaction
+            trans.commit()
+            return True
+            
+        except Exception as e:
+            # If any step fails, roll back
+            trans.rollback()
+            # Log the error and re-raise for the route to handle
+            raise Exception(f"Database transaction failed during tag update: {e}")
+        
+def update_user_tags(user_id: int, tags_list: list) -> bool:
+    """
+    Transactional update of user tags: maps names to IDs, deletes old, inserts new.
+    """
+    engine = get_db_engine()
+    
+    # 1. Map Tag Names to IDs
+    tag_id_map = get_tag_ids_by_names(tags_list)
+    
+    # Check for invalid tags submitted by the user
+    if len(tag_id_map) != len(tags_list):
+        submitted_set = set(tags_list)
+        found_set = set(tag_id_map.keys())
+        invalid_tags = list(submitted_set - found_set)
+        
+        # If any submitted tag is not found in the DB, raise an error
+        if invalid_tags:
+            # We re-raise an InputValidationExeption, assuming you import it here
+            from app.services.input_validatore import inputValidationExeption
+            raise inputValidationExeption(
+                "One or more submitted tags are invalid or not defined.",
+                errors={"tags": f"Invalid tags: {', '.join(invalid_tags)}"},
+                status_code=400
+            )
+
+    # 2. Start Transaction
+    with engine.connect() as connection:
+        trans = connection.begin()
+        
+        try:
+            # A. DELETE: Remove all existing tags for the user
+            delete_sql = "DELETE FROM user_tags WHERE user_id = :user_id;"
+            connection.execute(text(delete_sql), {'user_id': user_id})
+            
+            # B. INSERT: Add the new tags
+            if tags_list:
+                insert_values = []
+                for tag_name in tags_list:
+                    tag_id = tag_id_map[tag_name] # Use the mapped ID
+                    
+                    insert_values.append({
+                        'user_id': user_id,
+                        'tag_id': tag_id
+                    })
+
+                insert_sql = "INSERT INTO user_tags (user_id, tag_id) VALUES (:user_id, :tag_id);"
+                connection.execute(text(insert_sql), insert_values)
+
+            # C. COMMIT: Finalize the transaction
+            trans.commit()
+            return True
+            
+        except Exception as e:
+            # If any step fails, roll back
+            trans.rollback()
+            # Log the error and re-raise for the route to handle
+            raise Exception(f"Database transaction failed during tag update: {e}")

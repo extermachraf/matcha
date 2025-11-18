@@ -1,6 +1,8 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask import current_app
+from app.repositories.connection import get_db_engine
+from app.constants.tags import CATEGORY_IDS, ALL_TAGS
 
 import click
 
@@ -26,6 +28,9 @@ def create_app(config_class='config.DevelopmentConfig'):
     
     from app.routes.profile import bp as profile_bp
     app.register_blueprint(profile_bp, url_prefix='/api/profile')
+    
+    from app.routes.tags import bp as tags_bp
+    app.register_blueprint(tags_bp, url_prefix='/api/tags')
 
     # Fail-fast DB connectivity check: attempt a minimal query using the
     # same engine Flask-SQLAlchemy will use. If it fails, raise a clear
@@ -69,5 +74,58 @@ def create_app(config_class='config.DevelopmentConfig'):
         except Exception as e:
             click.echo(f"❌ Connection failed: {e}")
             raise SystemExit(2)
+        
+    @app.cli.command("run-sync-tags")
+    def run_sync_tags():
+        try:
+            engine = get_db_engine()
+            with engine.connect() as conn:
+                # Example sync operation; replace with actual logic
+                conn.execute(text("SELECT 1"))
+                click.echo("✅ Tags synchronized successfully.")
+        except Exception as e:
+            click.echo(f"❌ Tag synchronization failed: {e}")
+            raise SystemExit(2)
+        category_inserts = []
+        categories_to_insert = [
+            {'id': category_id, 'name': category_name}
+            for category_name, category_id in CATEGORY_IDS.items()
+        ]
+        
+        # --- 2. Generate SQL for Tags ---
+        # Create a list of tuples: (name, tag_category_id)
+        tags_to_insert = [
+            {'name': tag_name, 'tag_category_id': category_id}
+            for tag_name, category_id in ALL_TAGS.items()
+        ]
+        with engine.connect() as connection:
+            trans = connection.begin()
+        
+            try:
+                print("Starting Tag Synchronization...")
+                
+                # **IMPORTANT:** Use TRUNCATE to reset the tables completely 
+                # (or DELETE FROM if TRUNCATE is restricted)
+                # This ensures old, removed tags don't linger.
+                connection.execute(text("TRUNCATE TABLE tag_categories RESTART IDENTITY CASCADE;"))
+                print("Cleared existing categories and tags.")
+
+                # Insert Categories (Manual SQL)
+                category_sql = "INSERT INTO tag_categories (id, name) VALUES (:id, :name);"
+                connection.execute(text(category_sql), categories_to_insert)
+                print(f"Inserted {len(categories_to_insert)} categories.")
+
+                # Insert Tags (Manual SQL)
+                tag_sql = "INSERT INTO tags (name, tag_category_id) VALUES (:name, :tag_category_id);"
+                connection.execute(text(tag_sql), tags_to_insert)
+                print(f"Inserted {len(tags_to_insert)} tags.")
+
+                trans.commit()
+                print("✅ Tag synchronization complete.")
+            
+            except Exception as e:
+                trans.rollback()
+                print(f"❌ Synchronization failed: {e}")
+                raise
 
     return app

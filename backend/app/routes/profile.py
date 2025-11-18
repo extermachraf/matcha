@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, current_app, make_response, g
-from app.services.input_validatore import Validator, inputValidationExeption, validate_profile_update_data
+from app.services.input_validatore import Validator, inputValidationExeption, validate_profile_update_data, validate_update_tags_data
 from app.midlewares.auth_middleware import token_required, AuthRequiredException
-from app.repositories.user import get_user_by_id, update_user_profile
+from app.repositories.user import get_user_by_id, update_user_profile, update_user_tags
+from app.constants.tags import ALL_TAGS, CATEGORY_IDS
 
 
 bp = Blueprint('profile', __name__)
@@ -35,4 +36,31 @@ def method_name():
         return jsonify({"error": e.args[0]}), e.status_code
     except Exception as e:
         print(f"Unexpected error during profile update: {e}")
+        return jsonify({"error": "An unexpected server error occurred."}), 500
+
+
+
+#update_user_tags
+@bp.route('/tags/update-user-tags', methods=['PUT'])
+@token_required
+def update_tags():
+    try:
+        data = Validator(required_fields=['tags']).validate_json(request.json)
+        tags = data.get('tags', [])
+        if not isinstance(tags, list):
+            raise inputValidationExeption("Tags must be provided as a list.", status_code=422)
+        data = validate_update_tags_data(data)
+        update_user_tags(g.user['id'], tags)
+        return jsonify({"message": "User tags updated successfully."}), 200
+    except inputValidationExeption as e:
+        print(f"Input validation error during tag update: {e}")
+        return jsonify({
+            "error": e.args[0], 
+            "details": e.errors
+        }), e.status_code
+    except AuthRequiredException as e:
+        print(f"Authentication error during tag update: {e.args[0]}")
+        return jsonify({"error": e.args[0]}), e.status_code
+    except Exception as e:
+        print(f"Unexpected error during tag update: {e}")
         return jsonify({"error": "An unexpected server error occurred."}), 500
