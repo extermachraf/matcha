@@ -4,6 +4,9 @@ from app.midlewares.auth_middleware import token_required, AuthRequiredException
 from app.repositories.user import get_user_by_id, update_user_profile, update_user_tags
 from app.constants.tags import ALL_TAGS, CATEGORY_IDS
 from app.repositories.location import update_or_insert_location
+from app.services.file_handler import allowed_file, save_uploaded_file
+from app.repositories.picture import add_new_picture, count_user_pictures
+# from werkzeug.exceptions import RequestEntityTooLarge # For size limit
 
 
 bp = Blueprint('profile', __name__)
@@ -88,4 +91,40 @@ def update_location():
         return jsonify({"error": e.args[0]}), e.status_code
     except Exception as e:
         print(f"Unexpected error during location update: {e}")
+        return jsonify({"error": "An unexpected server error occurred."}), 500
+    
+    
+@bp.route('/pictures', methods=['POST'])
+@token_required
+def upload_profile_picture():
+    user_id = g.user['id']
+    
+    max_pictures = current_app.config['MAX_USER_PICTURES']
+    current_count = count_user_pictures(user_id)
+
+    if current_count >= max_pictures:
+        return jsonify({
+            "error": f"You have exceeded the maximum limit of {max_pictures} pictures."
+        }), 403 # Use 403 Forbidden for business logic violation
+
+    if 'file' not in request.files:
+        return jsonify({"error": "Missing file part in the request."}), 400
+    
+    file = request.files['file']
+    try:
+        file_path = save_uploaded_file(file, user_id)
+        new_pic_id = add_new_picture(user_id, file_path, is_profile_picture=False)
+        
+        return jsonify({
+            "message": "Picture uploaded successfully.",
+            "picture_id": new_pic_id,
+            "file_path": file_path
+        }), 201
+    except ValueError:
+        return jsonify({"error": "Uploaded file exceeds the maximum allowed size."}), 413
+    except AuthRequiredException as e:
+        print(f"Authentication error during picture upload: {e.args[0]}")
+        return jsonify({"error": e.args[0]}), e.status_code
+    except Exception as e:
+        print(f"Unexpected error during picture upload: {e}")
         return jsonify({"error": "An unexpected server error occurred."}), 500

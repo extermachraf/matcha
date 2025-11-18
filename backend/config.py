@@ -23,7 +23,14 @@ class Config:
     
     #smtp informations
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-     
+    
+    # file system storage configuration
+    UPLOAD_FOLDER = os.path.join(os.getcwd(), 'user_uploads')
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB limit for uploaded files
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+    
+    # Picture Upload Limits
+    MAX_USER_PICTURES = int(os.environ.get('MAX_USER_PICTURES', 5)) # Default to 5
 
 
 class DevelopmentConfig(Config):
