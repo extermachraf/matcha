@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app, make_response, g
-from app.services.input_validatore import Validator, inputValidationExeption, validate_profile_update_data, validate_update_tags_data
+from app.services.input_validatore import Validator, inputValidationExeption, validate_profile_update_data, validate_update_tags_data, validate_location_update
 from app.midlewares.auth_middleware import token_required, AuthRequiredException
 from app.repositories.user import get_user_by_id, update_user_profile, update_user_tags
 from app.constants.tags import ALL_TAGS, CATEGORY_IDS
+from app.repositories.location import update_or_insert_location
 
 
 bp = Blueprint('profile', __name__)
@@ -63,4 +64,28 @@ def update_tags():
         return jsonify({"error": e.args[0]}), e.status_code
     except Exception as e:
         print(f"Unexpected error during tag update: {e}")
+        return jsonify({"error": "An unexpected server error occurred."}), 500
+    
+#update user location
+@bp.route('/location', methods=['PUT'])
+@token_required
+def update_location():
+    user_id = g.user['id']
+    try:
+        # data = Validator(required_fields=['is_gps_enabled']).validate_json(request.json)
+        data = validate_location_update(request.json)
+        # Call the repository function to update user location
+        update_or_insert_location(user_id, data)
+        return jsonify({"message": "User location updated successfully."}), 200
+    except inputValidationExeption as e:
+        print(f"Input validation error during location update: {e}")
+        return jsonify({
+            "error": e.args[0], 
+            "details": e.errors
+        }), e.status_code
+    except AuthRequiredException as e:
+        print(f"Authentication error during location update: {e.args[0]}")
+        return jsonify({"error": e.args[0]}), e.status_code
+    except Exception as e:
+        print(f"Unexpected error during location update: {e}")
         return jsonify({"error": "An unexpected server error occurred."}), 500

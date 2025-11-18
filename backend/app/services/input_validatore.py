@@ -133,3 +133,38 @@ def validate_update_tags_data(data):
         raise inputValidationExeption("Tags data validation failed.", errors=errors)
         
     return data
+
+
+def validate_location_update(data):
+    """
+    Validates location data based on the presence of keys.
+    """
+    errors = {}
+    
+    # 1. Check for the mandatory 'is_gps_enabled' boolean
+    if 'is_gps_enabled' not in data or not isinstance(data['is_gps_enabled'], bool):
+        errors['is_gps_enabled'] = "Must provide a boolean value for 'is_gps_enabled'."
+        
+    # 2. If GPS is being enabled, Lat/Lon must be provided
+    if data.get('is_gps_enabled') is True:
+        if 'latitude' not in data or 'longitude' not in data:
+            errors['coordinates'] = "Latitude and longitude are required when GPS is enabled."
+        else:
+            # Basic range check for numeric types
+            try:
+                lat = float(data['latitude'])
+                lon = float(data['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    errors['coordinates'] = "Invalid latitude/longitude range."
+            except ValueError:
+                errors['coordinates'] = "Latitude and longitude must be numeric."
+
+    # 3. If GPS is disabled, we accept manual 'neighborhood' or approximate location.
+    if data.get('is_gps_enabled') is False and 'neighborhood' in data:
+        if not isinstance(data['neighborhood'], str) or len(data['neighborhood']) < 2:
+            errors['neighborhood'] = "Neighborhood must be a valid string."
+            
+    if errors:
+        raise inputValidationExeption("Location validation failed.", errors=errors)
+        
+    return data
