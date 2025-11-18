@@ -1,6 +1,7 @@
-from flask import Blueprint, request, jsonify, current_app, make_response
-from app.services.input_validatore import Validator, inputValidationExeption
+from flask import Blueprint, request, jsonify, current_app, make_response, g
+from app.services.input_validatore import Validator, inputValidationExeption, validate_profile_update_data
 from app.midlewares.auth_middleware import token_required, AuthRequiredException
+from app.repositories.user import get_user_by_id, update_user_profile
 
 
 bp = Blueprint('profile', __name__)
@@ -10,10 +11,27 @@ bp = Blueprint('profile', __name__)
 def method_name():
     # required fields for profile update
     try:
-        REQUIRED_FIELDS = ['first_name', 'last_name', 'biography', 'gender', 'sexual_preferences', ]
+        REQUIRED_FIELDS = ['username','first_name', 'last_name', 'biography', 'gender', 'sexual_preferences', 'birthdate']
+        data = Validator(required_fields=REQUIRED_FIELDS).validate_json(request.json)
+        print(f"this is the user from g: {g.user}")
+        user = get_user_by_id(g.user['id'])
+        
+        if not user:
+            raise AuthRequiredException("User not found in database.", status_code=401)
+        if not user.get('is_verified'):
+            raise AuthRequiredException("Account not verified.", status_code=403)
+        # validate profile update data
+        data = validate_profile_update_data(data, current_user_id=user['id'])
+        update_user_profile(user['id'], data)
         return jsonify({"message": "Profile updated successfully."}), 200
+    except inputValidationExeption as e:
+        print(f"Input validation error during profile update: {e}")
+        return jsonify({
+            "error": e.args[0], 
+            "details": e.errors
+        }), e.status_code
     except AuthRequiredException as e:
-        print(f"Authentication error during profile update: {e}")
+        print(f"Authentication error during profile update: {e.args[0]}")
         return jsonify({"error": e.args[0]}), e.status_code
     except Exception as e:
         print(f"Unexpected error during profile update: {e}")

@@ -244,3 +244,75 @@ def get_user_by_id(user_id: int) -> dict | None:
         return None
     
     return dict(result._mapping)
+
+def update_user_profile(user_id: int, data: dict):
+    """
+    Updates multiple user fields in the 'users' table using manual SQL.
+    """
+    engine = get_db_engine()
+    
+    # Dynamically build the SET clause for the UPDATE query
+    # This prevents errors if not all fields are passed
+    set_clauses = []
+    params = {'id': user_id}
+    
+    # Map input keys to column names
+    valid_fields = [
+        'username', 'first_name', 'last_name', 'biography', 
+        'gender', 'sexual_preferences', 'birthdate'
+    ]
+    
+    for key, value in data.items() :
+        if key in valid_fields:
+            # Add clause: 'column_name = :placeholder'
+            set_clauses.append(f"{key} = :{key}")
+            params[key] = value
+            
+    if not set_clauses:
+        # Prevent running an empty update query
+        return False
+
+    sql = f"""
+        UPDATE users
+        SET {', '.join(set_clauses)}
+        WHERE id = :id;
+    """
+    
+    try:
+        with engine.connect() as connection:
+            connection.execute(text(sql), params)
+            connection.commit()
+            return True
+    except Exception as e:
+        # PostgreSQL integrity error (e.g., unique constraint violation for username/email)
+        # You would catch specific psycopg2 errors here for a unique key violation.
+        raise Exception(f"Database update failed: {e}")
+    
+# check username uniquenes_excluding a user id
+def check_username_uniqueness_exept_id(username: str, user_id: int) -> bool:
+    """
+    Checks if the given username is unique, excluding the specified user ID.
+    
+    Args:
+        username: The username to check for uniqueness.
+        user_id: The user ID to exclude from the check.
+    Returns:
+        True if the username is unique, False if it already exists for another user.
+    """
+    engine = get_db_engine()
+    
+    sql = """
+        SELECT 1 FROM users
+        WHERE username = :username_param AND id != :user_id_param
+        LIMIT 1;
+    """
+    
+    params = {
+        'username_param': username,
+        'user_id_param': user_id
+    }
+    
+    with engine.connect() as connection:
+        result = connection.execute(text(sql), params).fetchone()
+        
+    return result is None  # True if unique, False if duplicate found
