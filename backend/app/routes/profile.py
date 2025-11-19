@@ -14,7 +14,7 @@ bp = Blueprint('profile', __name__)
 
 @bp.route('/', methods=['PUT'])
 @token_required
-def method_name():
+def update_profile_data():
     # required fields for profile update
     try:
         REQUIRED_FIELDS = ['username','first_name', 'last_name', 'biography', 'gender', 'sexual_preferences', 'birthdate']
@@ -42,7 +42,6 @@ def method_name():
     except Exception as e:
         print(f"Unexpected error during profile update: {e}")
         return jsonify({"error": "An unexpected server error occurred."}), 500
-
 
 
 #update_user_tags
@@ -74,6 +73,8 @@ def update_tags():
 @bp.route('/location', methods=['PUT'])
 @token_required
 def update_location():
+    # TODO: to be enhanced for reling on gps enable/disable flag from the client
+    # TODO: if not gps enabled we should be able to update location based on ip address ip (to be implemented later)
     user_id = g.user['id']
     try:
         # data = Validator(required_fields=['is_gps_enabled']).validate_json(request.json)
@@ -166,10 +167,7 @@ def delete_picture(picture_id):
             os.remove(full_path)
         reorder_user_pictures(user_id)
         
-        #TODO:
-        # MANDATORY: If the deleted picture was the profile picture, 
-        # you need a repository function to automatically set a new one 
-        # (e.g., the one with upload_order = 1) or set the profile_picture_id column to NULL.
+        #TODO:: if the deleated picture was the profile picture, set another one as profile picture or set to null
 
         return jsonify({"message": "Picture deleted successfully."}), 200
     

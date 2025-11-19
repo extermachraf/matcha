@@ -160,18 +160,12 @@ def login():
         token = generate_verification_token(user['id'])
         # update last seen
         update_user_last_seen(user['id'])
+        #remouve password from user
+        user.pop('password_hash', None)
         
         response_data = {
             "message": "Login successful.",
-            "user": {
-                "id": user['id'],
-                "username": user['username'],
-                "email": user['email'],
-                "first_name": user['first_name'],
-                "last_name": user['last_name'],
-                "fame_rating": user['fame_rating'],
-                # add other non-sensitive fields as needed
-            }
+            "user": user
         }
         
         response = make_response(jsonify(response_data), 200)
