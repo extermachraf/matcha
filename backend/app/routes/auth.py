@@ -1,11 +1,12 @@
-from flask import Blueprint, request, jsonify, current_app, make_response
+from flask import Blueprint, request, jsonify, current_app, make_response, g
 from app.services.input_validatore import Validator, inputValidationExeption, validate_registration_data, validate_email_format
-from app.repositories.user import check_user_uniqueness, create_new_user, verify_user, get_user_by_email, update_user_password, update_user_last_seen
+from app.repositories.user import check_user_uniqueness, create_new_user, verify_user, get_user_by_email, update_user_password, update_user_last_seen, get_user_by_id
 from app.services.password_handler import hash_password, verify_password
 from app.services.jwt_handler import generate_verification_token, validate_jwt_token
 from app.services.smtp_handler import send_verification_email, send_password_reset_email
 from app.exeptions.token_exeption import TokenVerificationException
 from app.exeptions.email_exeption import EmailVerificationException
+from app.midlewares.auth_middleware import token_required
 
 bp = Blueprint('auth', __name__)
 
@@ -190,4 +191,25 @@ def logout():
         return response
     except Exception as e:
         print(f"Unexpected error during logout: {e}")
+        return jsonify({"error": "An unexpected server error occurred."}), 500
+    
+    
+@bp.route('/me', methods=['GET'])
+@token_required
+def get_current_user():
+    try:
+        user = get_user_by_id(g.user['id'])
+        if not user:
+            raise inputValidationExeption("User not found.", status_code=404)
+        #remouve password from user
+        user.pop('password_hash', None)
+        return jsonify({"user": user}), 200
+    except inputValidationExeption as e:
+        print(f"Input validation error during fetching current user: {e}")
+        return jsonify({
+            "error": e.args[0], 
+            "details": e.errors
+        }), e.status_code
+    except Exception as e:
+        print(f"Unexpected error during fetching current user: {e}")
         return jsonify({"error": "An unexpected server error occurred."}), 500
