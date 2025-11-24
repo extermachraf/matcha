@@ -30,7 +30,10 @@ class Config:
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
     
     # Picture Upload Limits
-    MAX_USER_PICTURES = int(os.environ.get('MAX_USER_PICTURES', 5)) # Default to 5
+    MAX_USER_PICTURES = int(os.environ.get('MAX_USER_PICTURES', 5)) # Default to 57
+    
+    #frontend host
+    FRONTEND_HOST=os.environ.get('FRONTEND_HOST')
 
 
 class DevelopmentConfig(Config):

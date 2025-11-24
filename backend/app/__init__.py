@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask import current_app
 from app.repositories.connection import get_db_engine
 from app.constants.tags import CATEGORY_IDS, ALL_TAGS
+from flask_cors import CORS
 
 import click
 
@@ -15,6 +16,12 @@ def create_app(config_class='config.DevelopmentConfig'):
 
     # Load configuration from the specified class
     app.config.from_object(config_class)
+    
+    print("Config FRONTEND_HOST:", app.config.get('FRONTEND_HOST'))
+    CORS(app, 
+         resources={r"/api/*": {"origins": "*"}}, # Allow all origins for development
+         supports_credentials=True # Crucial for sending cookies (JWT in HTTP-only cookie)
+    )
 
     # IMPORTANT: We rely exclusively on `DATABASE_URL` in the environment/.env.
     # `config.Config` should have populated `app.config['DATABASE_URL']`.
@@ -127,5 +134,15 @@ def create_app(config_class='config.DevelopmentConfig'):
                 trans.rollback()
                 print(f"❌ Synchronization failed: {e}")
                 raise
-
+            
+    @app.cli.command("test-email-send")
+    def test_email_send():
+        """Test sending a verification email using the SMTP handler."""
+        from app.services.smtp_handler import send_verification_email
+        test_email = "achraf.miam+1@gmail.com"
+        test_verification_url = "http://example.com/verify?token=testtoken123"
+        if send_verification_email(test_email, test_verification_url):
+            print("✅ Test email sent successfully.")        
+        else:
+            print("❌ Test email failed to send.")
     return app

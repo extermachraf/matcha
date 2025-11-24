@@ -35,10 +35,11 @@ def register():
         # Create the new user record
         new_user_id = create_new_user(data)
         # generate url tokens
-        verification_url = f"{current_app.config.get('BACKEND_HOST')}/auth/verify-email?token={generate_verification_token(new_user_id)}"
-        if send_verification_email(data['email'], verification_url):
+        verification_url = f"{current_app.config.get('FRONTEND_HOST')}/verify-email?token={generate_verification_token(new_user_id)}"
+        try:
+            send_verification_email(data['email'], verification_url)
             return jsonify({"message": "Registration successful. Verification email sent."}), 201
-        else:
+        except Exception as e:
             # Handle failure gracefully (e.g., log error, prompt user to retry)
             return jsonify({"error": "Registration failed: Could not send verification email."}), 500
     except inputValidationExeption as e:
@@ -59,11 +60,14 @@ def verify_email():
         if not token:
             raise EmailVerificationException("Missing verification token.", status_code=400)
         # Validate the token and extract payload
-        payaload = validate_jwt_token(token)
+        payload = validate_jwt_token(token)
         
         # update user record to set email as verified
-        verify_user(payaload['sub'])
-        return jsonify({"message": "Email successfully verified."}), 200
+        verify_user(payload['sub'])
+        # put token in http only cookie
+        response = jsonify({"message": "Email successfully verified."})
+        response.set_cookie('auth_token', token, httponly=True, secure=True, samesite='Lax')
+        return response, 200
         
     except EmailVerificationException as e:
         print(f"Email verification error: {e}")

@@ -6,7 +6,7 @@ import { useState } from "react";
 import SignUp from "./SignUp";
 import SignIn from "./SignIn";
 
-export function SignupForm({
+export function SignInUpForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {

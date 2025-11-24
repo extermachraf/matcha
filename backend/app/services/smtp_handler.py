@@ -29,8 +29,10 @@ def send_verification_email(recipient_email: str, verification_url: str):
         email = resend.Emails.send(params)
         print(f"✅ Resend success. Email ID: {email['id']}")
         return True
-    except resend.exceptions as e:
-        print(f"❌ Resend API Error: {e.status_code} - {e.message}")
+    except getattr(resend, 'exceptions', Exception).ResendError as e:
+        # Resend raises ResendError on API problems; handle it explicitly.
+        # Use getattr above to avoid attribute errors if the package layout differs.
+        print(f"❌ Resend API Error: {getattr(e, 'status_code', 'N/A')} - {getattr(e, 'message', str(e))}")
         # In production, you would want to log this and potentially retry.
         return False
     except Exception as e:
@@ -64,8 +66,8 @@ def send_password_reset_email(recipient_email: str, reset_url: str):
         email = resend.Emails.send(params)
         print(f"✅ Resend success. Email ID: {email['id']}")
         return True
-    except resend.exceptions as e:
-        print(f"❌ Resend API Error: {e.status_code} - {e.message}")
+    except getattr(resend, 'exceptions', Exception).ResendError as e:
+        print(f"❌ Resend API Error: {getattr(e, 'status_code', 'N/A')} - {getattr(e, 'message', str(e))}")
         return False
     except Exception as e:
         print(f"❌ Unknown Error sending email via Resend: {e}")
