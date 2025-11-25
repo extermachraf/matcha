@@ -3,6 +3,7 @@ from app.services.input_validatore import Validator, inputValidationExeption, va
 from app.midlewares.auth_middleware import token_required, AuthRequiredException
 from app.repositories.user import get_user_by_id, update_user_profile
 from app.constants.tags import ALL_TAGS, CATEGORY_IDS
+from app.repositories.tags import get_user_tags_by_id
 
 bp = Blueprint('tags', __name__)
 
@@ -24,3 +25,18 @@ def get_all_tags():
         structured_tags[category_name].append(tag_name)
         
     return jsonify(structured_tags), 200
+
+
+@bp.route('/user-tags/<int:id>', methods=['GET'])
+@token_required
+def get_user_tags(id):
+    """Returns the tags associated with the authenticated user."""
+    if not id:
+        return jsonify({"error": "User ID is required"}), 400
+    try:
+        user_tags = get_user_tags_by_id(id)
+        return jsonify({"tags": user_tags}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving user tags for user_id {id}: {e}")
+        return jsonify({"error": "Failed to retrieve user tags"}), 500
+    # call get user tags by id from repository

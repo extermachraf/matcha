@@ -14,6 +14,15 @@ const AUTH_ROUTE = [
   "/reset-password",
 ];
 
+function decodeJwt(token: string) {
+  try {
+    const payload = token.split(".")[1];
+    return JSON.parse(Buffer.from(payload, "base64").toString());
+  } catch {
+    return null;
+  }
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -22,12 +31,27 @@ export function middleware(request: NextRequest) {
   const isProtectedPath = PROTECTED_PATHS.some((path) =>
     pathname.startsWith(path)
   );
+  const isAuthRoute = AUTH_ROUTE.some((path) => pathname.startsWith(path));
+
+  // ===========================
+  // 🔥 JWT Expiration Check
+  // ===========================
+  if (authToken) {
+    const decoded = decodeJwt(authToken);
+    const isExpired = !decoded || decoded.exp * 1000 < Date.now();
+
+    if (isExpired) {
+      // Delete the invalid token
+      const response = NextResponse.redirect(new URL("/login", request.url));
+      response.cookies.delete("auth_token");
+      return response;
+    }
+  }
 
   if (isProtectedPath && !authToken) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const isAuthRoute = AUTH_ROUTE.some((path) => pathname.startsWith(path));
   if (isAuthRoute && authToken) {
     return NextResponse.redirect(new URL("/profile", request.url));
   }

@@ -23,7 +23,7 @@ def token_required(f):
         
         # 1. Token Retrieval (Priority: HTTP-Only Cookie)
         token = request.cookies.get('auth_token')
-
+        print("Auth Token from Cookie:", token)
         if not token:
             # 2. Fallback: Authorization Header (Bearer Token)
             auth_header = request.headers.get('Authorization')
@@ -31,7 +31,6 @@ def token_required(f):
                 token = auth_header.split(' ')[1]
 
         if not token:
-            # If token is missing, return error response immediately
             return jsonify({"error": "Authentication token is missing."}), 401
 
         try:
@@ -52,7 +51,10 @@ def token_required(f):
                 raise AuthRequiredException("Account not verified.", status_code=403)
 
         except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Authentication token has expired."}), 401
+            # delet token from cookies if exists
+            response = jsonify({"error": "Authentication token has expired."})
+            response.set_cookie('auth_token', '', expires=0, httponly=True, secure=True, samesite='Lax')
+            return response, 401
         
         except jwt.InvalidTokenError:
             # Catches signature failure or incorrect token type

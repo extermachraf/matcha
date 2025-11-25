@@ -1,10 +1,11 @@
 import axios from "axios";
+import { useRouter } from "next/router";
 
 const api = axios.create({
   // Prefer env if set; otherwise use relative `/api` so Next proxy (if present)
   // is used and cookies remain same-origin during development.
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || "/api",
-  timeout: 10000,
+  timeout: 100000,
   headers: {
     "Content-Type": "application/json",
   },
@@ -20,6 +21,7 @@ api.interceptors.response.use(
         error
       );
     }
+    // window.location.href = "/login";
     return Promise.reject(error);
   }
 );

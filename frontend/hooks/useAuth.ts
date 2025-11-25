@@ -1,6 +1,9 @@
 // src/hooks/useAuth.ts
+"use client";
 import { useUserStore } from "@/lib/userStore";
+import { shallow } from "zustand/shallow";
 import { User } from "@/lib/types"; // Import your User interface
+import api from "@/lib/axiosInstance";
 
 interface AuthStatus {
   user: User | null;
@@ -34,17 +37,16 @@ const checkProfileCompletion = (user: User | null): boolean => {
 
   // 2. Check for the profile picture (requires profilePictureId to be a number, not null)
   const hasProfilePicture = user.profilePictureId !== null;
-
   // Return true only if both data and picture are present
   return isBasicDataComplete && hasProfilePicture;
 };
 
 export const useAuth = (): AuthStatus => {
   // Use a selector to pull necessary state from Zustand
-  const { user, isAuthenticated } = useUserStore((state) => ({
-    user: state.user,
-    isAuthenticated: state.isAuthenticated,
-  }));
+  // Select primitives separately to avoid returning a new object each render
+  // (this prevents unnecessary re-renders and infinite loops).
+  const user = useUserStore((state) => state.user);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
   // 📌 We can't easily track `isLoading` here without modifying the store to expose it.
   // For now, we assume `isAuthenticated` being true means the session check in the Provider is done.
